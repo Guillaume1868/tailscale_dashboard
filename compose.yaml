@@ -1,0 +1,7 @@
+services:
+  tailscale-dashboard:
+    build: .
+    ports:
+      - "4567:4567"
+    env_file:
+      - .env

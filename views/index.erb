@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Tailscale Dashboard</title>
+</head>
+<body>
+  <h1>Containers on Tailscale</h1>
+  <ul>
+    <% @devices.each do |device| %>
+      <li>
+        <a href="https://<%= device["name"] %>">
+          <%= device["hostname"] %> (<%= device["name"] %>)
+        </a>
+      </li>
+    <% end %>
+  </ul>
+</body>
+</html>
