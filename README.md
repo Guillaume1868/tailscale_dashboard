@@ -29,4 +29,25 @@ TAILNET_NAME=your-tailnet-name.ts.net
 ```
 
 ### 3. Start Docker Container
-`docker compose up --build`
+`docker compose up -d`
+
+### 4. (Optional) Serve the App via Tailscale
+
+If you want to access this dashboard **securely through your Tailnet**, you can use [`tailscale serve`](https://tailscale.com/kb/1223/tailscale-serve/):
+
+#### Serve locally over Tailscale:
+
+```bash
+tailscale serve -bg http://localhost:4567
+```
+
+This will expose the app on your Tailnet with an HTTPS link like:  
+`https://<machine-name>.your-tailnet.ts.net`
+
+Tailscale will remember this configuration across reboots.
+
+#### To disable:
+
+```bash
+tailscale serve --https=443 off
+```

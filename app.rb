@@ -11,6 +11,8 @@ TS_CLIENT_SECRET = ENV['TS_CLIENT_SECRET']
 $access_token = nil
 $token_expires_at = Time.now - 60  # Expired by default
 
+set :host_authorization, { permitted_hosts: [] }
+
 def fetch_oauth_token
   # Return cached token if it's still valid
   return $access_token if Time.now < $token_expires_at - 60  # Refresh 1 min early
