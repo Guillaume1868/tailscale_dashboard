@@ -9,8 +9,6 @@ Each container is displayed as a clickable link pointing to its FQDN:
 
 - Docker & Docker Compose
 
----
-
 ## Setup
 
 ### 1. Create Tailscale OAuth Client
