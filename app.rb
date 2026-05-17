@@ -2,6 +2,7 @@ require 'sinatra'
 require 'net/http'
 require 'json'
 require 'dotenv/load'
+require 'time'
 
 TAILNET = ENV['TAILNET_NAME']
 TS_CLIENT_ID = ENV['TS_CLIENT_ID']
@@ -38,18 +39,25 @@ def fetch_oauth_token
 end
 
 get '/' do
+  begin
+    access_token = fetch_oauth_token
 
-  access_token = fetch_oauth_token
+    uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/devices")
+    req = Net::HTTP::Get.new(uri)
+    req['Authorization'] = "Bearer #{access_token}"
 
-  uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/devices")
-  req = Net::HTTP::Get.new(uri)
-  req['Authorization'] = "Bearer #{access_token}"
+    res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
 
-  res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+    raise "API Error: #{res.code} - #{res.message}" unless res.is_a?(Net::HTTPSuccess)
 
-  data = JSON.parse(res.body)
-  @devices = data["devices"].select do |device|
-    device["tags"]&.include?("tag:container")
+    data = JSON.parse(res.body)
+    @devices = data["devices"].select do |device|
+      device["tags"]&.include?("tag:container")
+    end || []
+    @error = nil
+  rescue => e
+    @devices = []
+    @error = e.message
   end
 
   erb :index

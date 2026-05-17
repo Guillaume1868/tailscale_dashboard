@@ -1,9 +1,20 @@
-# Tailscale Container Dashboard
+# Tailscale Container Dashboard (v1.1.0)
 
 A lightweight Sinatra-based web app that displays all Tailscale devices tagged with `tag:container`, and links them to their Tailnet DNS addresses.
 
 Each container is displayed as a clickable link pointing to its FQDN:  
 `<hostname>.your-tailnet.ts.net`
+
+## Features
+
+- **Responsive Grid Dashboard**: Minimal UI, looks great on desktop and mobile.
+- **Connection Status**: Real-time online/offline indicator for each container.
+- **Tailscale IPs**: Displays IPv4 and IPv6 addresses for quick reference.
+- **Custom Ports**: Assign tags like `tag:port-8080` to automatically link directly to the correct port.
+- **Search & Filter**: Real-time JavaScript search bar to filter nodes by name, hostname, or IP.
+- **System Information**: Quickly displays the OS and Tailscale client version for each node.
+- **Robust Error Handling**: Clean UI responses when the Tailscale API hits a rate limit or credentials are wrong.
+- **Auto-Refresh**: Dashboard automatically updates every 60 seconds.
 
 ## Requirements
 
