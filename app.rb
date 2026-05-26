@@ -54,9 +54,10 @@ get '/' do
     @devices = (data["devices"] || []).sort_by do |device|
       hostname = device["hostname"].to_s.downcase
       fallback_name = device["name"].to_s.downcase
+      container_tagged = device["tags"].is_a?(Array) && device["tags"].include?("tag:container")
 
       [
-        device["tags"]&.include?("tag:container") ? 1 : 0,
+        container_tagged ? 1 : 0,
         hostname.empty? ? fallback_name : hostname
       ]
     end
