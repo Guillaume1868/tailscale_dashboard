@@ -52,7 +52,11 @@ get '/' do
 
     data = JSON.parse(res.body)
     @devices = (data["devices"] || []).sort_by do |device|
-      device["tags"]&.include?("tag:container") ? 1 : 0
+      [
+        device["tags"]&.include?("tag:container") ? 1 : 0,
+        device["hostname"].to_s.downcase,
+        device["name"].to_s.downcase
+      ]
     end
     @error = nil
   rescue => e
