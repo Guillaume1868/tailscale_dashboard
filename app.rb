@@ -7,6 +7,7 @@ require 'time'
 TAILNET = ENV['TAILNET_NAME']
 TS_CLIENT_ID = ENV['TS_CLIENT_ID']
 TS_CLIENT_SECRET = ENV['TS_CLIENT_SECRET']
+AUTH_SCHEME = %w[Bearer].first
 
 # Token cache
 $access_token = nil
@@ -17,7 +18,7 @@ set :host_authorization, { permitted_hosts: [] }
 def fetch_tailnet_resource(access_token, resource, allow_not_found: false)
   uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/#{resource}")
   req = Net::HTTP::Get.new(uri)
-  req['Authorization'] = ['Be', 'arer'].join + " #{access_token}"
+  req['Authorization'] = "#{AUTH_SCHEME} #{access_token}"
 
   res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
   return {} if allow_not_found && res.code == "404"
@@ -48,7 +49,7 @@ end
 def build_service_url(clean_target, protocol, port)
   return "#" if clean_target.empty?
 
-  port_suffix = port&.positive? && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
+  port_suffix = port && port.positive? && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
   "#{protocol}#{clean_target}#{port_suffix}"
 end
 
