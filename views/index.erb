@@ -82,33 +82,42 @@
       <ul class="devices-grid" id="devices-grid">
         <% @devices.each do |device| %>
           <% 
-            # Detect port from tag and keep HTTPS unless HTTP is explicitly requested
-            port = ""
-            protocol = "https://"
-            device["tags"]&.each do |tag|
-              if tag =~ /^tag:port-(\d+)$/
-                port = ":#{$1}"
-              elsif tag == "tag:proto-http"
-                protocol = "http://"
+            if device["isService"]
+              service_port = device["servicePort"].to_s
+              port = service_port.empty? ? "" : ":#{service_port}"
+              url = device["serviceUrl"].to_s.empty? ? "#" : device["serviceUrl"]
+              is_online = true
+              status_title = "Published service"
+            else
+              # Detect port from tag and keep HTTPS unless HTTP is explicitly requested
+              port = ""
+              protocol = "https://"
+              device["tags"]&.each do |tag|
+                if tag =~ /^tag:port-(\d+)$/
+                  port = ":#{$1}"
+                elsif tag == "tag:proto-http"
+                  protocol = "http://"
+                end
               end
-            end
-            url = "#{protocol}#{device['name']}#{port}"
+              url = "#{protocol}#{device['name']}#{port}"
 
-            # Check if recently seen (e.g. within 5 minutes)
-            # Handle potential missing lastSeen
-            is_online = false
-            begin
-              last_seen = Time.parse(device["lastSeen"])
-              is_online = (Time.now.utc - last_seen) < 300
-            rescue
-              # If parse fails or lastSeen missing, assume offline
+              # Check if recently seen (e.g. within 5 minutes)
+              # Handle potential missing lastSeen
+              is_online = false
+              begin
+                last_seen = Time.parse(device["lastSeen"])
+                is_online = (Time.now.utc - last_seen) < 300
+              rescue
+                # If parse fails or lastSeen missing, assume offline
+              end
+              status_title = is_online ? "Online" : "Offline (Last seen: #{device['lastSeen'] || 'Unknown'})"
             end
           %>
           <li class="device-card" data-search="<%= device['hostname'].to_s.downcase %> <%= device['name'].to_s.downcase %> <%= (device['addresses'] || []).join(' ') %>">
             <a href="<%= url %>" target="_blank" rel="noopener noreferrer">
               <div class="device-header">
                 <div class="device-name"><%= device["hostname"] %></div>
-                <div class="status-dot <%= is_online ? 'status-online' : 'status-offline' %>" title="<%= is_online ? 'Online' : 'Offline (Last seen: ' + (device['lastSeen'] || 'Unknown') + ')' %>"></div>
+                <div class="status-dot <%= is_online ? 'status-online' : 'status-offline' %>" title="<%= status_title %>"></div>
               </div>
               <div class="device-hostname"><%= device["name"] %></div>
               
@@ -122,7 +131,7 @@
                 <div class="device-version">
                   <%= device["os"] || "Unknown OS" %>  <br> TS <%= device["clientVersion"] || "Unknown" %>
                 </div>
-                <span class="device-link">Open <%= port.empty? ? 'Service' : "Port #{port.sub(':','')}" %></span>
+                <span class="device-link">Open <%= device["isService"] || port.empty? ? 'Service' : "Port #{port.sub(':','')}" %></span>
               </div>
             </a>
           </li>

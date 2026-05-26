@@ -14,6 +14,58 @@ $token_expires_at = Time.now - 60  # Expired by default
 
 set :host_authorization, { permitted_hosts: [] }
 
+def fetch_tailnet_resource(access_token, resource)
+  uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/#{resource}")
+  req = Net::HTTP::Get.new(uri)
+  req['Authorization'] = ['Bearer', access_token].join(' ')
+
+  res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+  raise "API Error (#{resource}): #{res.code} - #{res.message}" unless res.is_a?(Net::HTTPSuccess)
+
+  JSON.parse(res.body)
+end
+
+def first_present(*values)
+  values.find { |value| !value.to_s.strip.empty? }.to_s
+end
+
+def extract_service_port(service)
+  return service["port"].to_i if service["port"].to_s.match?(/^\d+$/)
+  return nil unless service["ports"].is_a?(Array)
+
+  first_port = service["ports"].find do |port_value|
+    port_value.to_s.match?(/^\d+$/) || (port_value.is_a?(Hash) && port_value["port"].to_s.match?(/^\d+$/))
+  end
+
+  return nil if first_port.nil?
+
+  first_port.is_a?(Hash) ? first_port["port"].to_i : first_port.to_i
+end
+
+def normalize_service(service)
+  hostname = first_present(service["hostname"], service["name"], "Service")
+  target = first_present(service["dnsName"], service["tailnetTarget"], service["name"], service["hostname"])
+  target = target.sub(%r{\Ahttps?://}, "")
+  protocol = service["protocol"].to_s.downcase == "http" ? "http://" : "https://"
+  port = extract_service_port(service)
+
+  raw_addresses = service["addresses"] || service["addrs"] || service["address"]
+  addresses = raw_addresses.is_a?(Array) ? raw_addresses.map(&:to_s) : raw_addresses.to_s.empty? ? [] : [raw_addresses.to_s]
+
+  {
+    "hostname" => hostname,
+    "name" => target.empty? ? hostname : target,
+    "addresses" => addresses,
+    "tags" => [],
+    "lastSeen" => Time.now.utc.iso8601,
+    "os" => "Service",
+    "clientVersion" => service["protocol"].to_s.empty? ? "Published" : service["protocol"].to_s.upcase,
+    "isService" => true,
+    "servicePort" => port,
+    "serviceUrl" => target.empty? ? "#" : "#{protocol}#{target}#{port ? ":#{port}" : ""}"
+  }
+end
+
 def fetch_oauth_token
   # Return cached token if it's still valid
   return $access_token if Time.now < $token_expires_at - 60  # Refresh 1 min early
@@ -42,25 +94,22 @@ get '/' do
   begin
     access_token = fetch_oauth_token
 
-    uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/devices")
-    req = Net::HTTP::Get.new(uri)
-    req['Authorization'] = "Bearer #{access_token}"
+    services_data = fetch_tailnet_resource(access_token, 'services')
+    devices_data = fetch_tailnet_resource(access_token, 'devices')
 
-    res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+    services = (services_data["services"] || []).map { |service| normalize_service(service) }.sort_by do |service|
+      service["hostname"].to_s.downcase
+    end
 
-    raise "API Error: #{res.code} - #{res.message}" unless res.is_a?(Net::HTTPSuccess)
-
-    data = JSON.parse(res.body)
-    @devices = (data["devices"] || []).sort_by do |device|
+    tagged_devices = (devices_data["devices"] || []).select do |device|
+      device["tags"].is_a?(Array) && device["tags"].include?("tag:container")
+    end.sort_by do |device|
       hostname = device["hostname"].to_s.downcase
       fallback_name = device["name"].to_s.downcase
-      container_tagged = device["tags"].is_a?(Array) && device["tags"].include?("tag:container")
-
-      [
-        container_tagged ? 1 : 0,
-        hostname.empty? ? fallback_name : hostname
-      ]
+      hostname.empty? ? fallback_name : hostname
     end
+
+    @devices = services + tagged_devices
     @error = nil
   rescue => e
     @devices = []
