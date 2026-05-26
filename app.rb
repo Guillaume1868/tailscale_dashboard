@@ -26,7 +26,7 @@ def fetch_tailnet_resource(access_token, resource)
 end
 
 def first_present(*values)
-  values.find { |value| !value.to_s.strip.empty? }.to_s
+  values.find { |value| !value.to_s.strip.empty? }
 end
 
 def extract_service_port(service)
@@ -43,18 +43,27 @@ def extract_service_port(service)
 end
 
 def normalize_service(service)
-  hostname = first_present(service["hostname"], service["name"], "Service")
-  target = first_present(service["dnsName"], service["tailnetTarget"], service["name"], service["hostname"])
-  target = target.sub(%r{\Ahttps?://}, "")
-  protocol = service["protocol"].to_s.downcase == "http" ? "http://" : "https://"
+  hostname = first_present(service["hostname"], service["name"], "Service").to_s
+  raw_target = first_present(service["dnsName"], service["tailnetTarget"], service["name"], service["hostname"]).to_s
+  clean_target = raw_target.sub(%r{\Ahttps?://}, "")
+  protocol = if raw_target.start_with?("http://")
+               "http://"
+             elsif raw_target.start_with?("https://")
+               "https://"
+             elsif service["protocol"].to_s.downcase == "http"
+               "http://"
+             else
+               "https://"
+             end
   port = extract_service_port(service)
+  port_suffix = port && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
 
   raw_addresses = service["addresses"] || service["addrs"] || service["address"]
   addresses = raw_addresses.is_a?(Array) ? raw_addresses.map(&:to_s) : raw_addresses.to_s.empty? ? [] : [raw_addresses.to_s]
 
   {
     "hostname" => hostname,
-    "name" => target.empty? ? hostname : target,
+    "name" => clean_target.empty? ? hostname : clean_target,
     "addresses" => addresses,
     "tags" => [],
     "lastSeen" => Time.now.utc.iso8601,
@@ -62,7 +71,7 @@ def normalize_service(service)
     "clientVersion" => service["protocol"].to_s.empty? ? "Published" : service["protocol"].to_s.upcase,
     "isService" => true,
     "servicePort" => port,
-    "serviceUrl" => target.empty? ? "#" : "#{protocol}#{target}#{port ? ":#{port}" : ""}"
+    "serviceUrl" => clean_target.empty? ? "#" : "#{protocol}#{clean_target}#{port_suffix}"
   }
 end
 

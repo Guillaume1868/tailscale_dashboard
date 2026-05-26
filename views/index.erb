@@ -76,7 +76,7 @@
     <% if @devices.empty? && !@error %>
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
-        <p class="empty-state-text">No services found in this tailnet</p>
+        <p class="empty-state-text">No services or tagged devices found in this tailnet</p>
       </div>
     <% else %>
       <ul class="devices-grid" id="devices-grid">
@@ -131,7 +131,7 @@
                 <div class="device-version">
                   <%= device["os"] || "Unknown OS" %>  <br> TS <%= device["clientVersion"] || "Unknown" %>
                 </div>
-                <span class="device-link">Open <%= device["isService"] || port.empty? ? 'Service' : "Port #{port.sub(':','')}" %></span>
+                <span class="device-link">Open <%= device["isService"] ? 'Service' : (port.empty? ? 'Service' : "Port #{port.sub(':','')}") %></span>
               </div>
             </a>
           </li>
