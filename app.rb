@@ -52,9 +52,12 @@ get '/' do
 
     data = JSON.parse(res.body)
     @devices = (data["devices"] || []).sort_by do |device|
+      hostname = device["hostname"].to_s.downcase
+      fallback_name = device["name"].to_s.downcase
+
       [
         device["tags"]&.include?("tag:container") ? 1 : 0,
-        device["hostname"].to_s.downcase.empty? ? device["name"].to_s.downcase : device["hostname"].to_s.downcase
+        hostname.empty? ? fallback_name : hostname
       ]
     end
     @error = nil
