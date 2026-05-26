@@ -54,8 +54,7 @@ get '/' do
     @devices = (data["devices"] || []).sort_by do |device|
       [
         device["tags"]&.include?("tag:container") ? 1 : 0,
-        device["hostname"].to_s.downcase,
-        device["name"].to_s.downcase
+        device["hostname"].to_s.downcase.empty? ? device["name"].to_s.downcase : device["hostname"].to_s.downcase
       ]
     end
     @error = nil
