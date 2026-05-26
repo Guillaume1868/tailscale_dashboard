@@ -7,52 +7,197 @@
   <title>Tailscale Dashboard</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh; padding: 2rem; color: #333;
+
+    :root {
+      --bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --panel: rgba(255, 255, 255, 0.96);
+      --text: #182033;
+      --muted: #667085;
+      --border: rgba(24, 32, 51, 0.08);
+      --shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+      --shadow-hover: 0 18px 36px rgba(15, 23, 42, 0.18);
+      --good: #22c55e;
     }
-    .container { max-width: 900px; margin: 0 auto; }
-    header { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 2rem; text-align: center; }
-    h1 { font-size: 2.5rem; font-weight: 700; color: #1a202c; margin-bottom: 0.5rem; }
-    .subtitle { color: #718096; font-size: 1.1rem; }
-    
-    .search-container { margin-bottom: 2rem; }
-    .search-input { width: 100%; padding: 1rem; border-radius: 8px; border: none; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .search-input:focus { outline: 2px solid #667eea; }
 
-    .error-card { background: #fee2e2; color: #c53030; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; font-weight: bold; }
+    body {
+      min-height: 100vh;
+      padding: 2rem;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+    }
 
-    .devices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; list-style: none; }
-    .device-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.3s ease; border: 2px solid transparent; display: flex; flex-direction: column; }
-    .device-card:hover { transform: translateY(-4px); box-shadow: 0 8px 12px rgba(0,0,0,0.15); border-color: #667eea; }
-    .device-card a { text-decoration: none; color: inherit; display: block; flex-grow: 1; }
-    
-    .device-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; position: relative; }
-    .device-name { font-size: 1.25rem; font-weight: 600; color: #2d3748; word-break: break-word; padding-right: 1.5rem; }
-    
-    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; position: absolute; right: 0; top: 6px; }
-    .status-online { background-color: #48bb78; box-shadow: 0 0 8px #48bb78; }
-    .status-offline { background-color: #f56565; }
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
 
-    .device-hostname { color: #718096; font-size: 0.85rem; margin-bottom: 0.75rem; word-break: break-all; }
-    .device-ips { font-size: 0.8rem; color: #4a5568; margin-bottom: 1rem; background: #edf2f7; padding: 0.5rem; border-radius: 6px; }
-    .device-ips div { margin-bottom: 0.2rem; }
-    .device-ips div:last-child { margin-bottom: 0; }
-    
-    .device-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; }
-    .device-version { font-size: 0.75rem; color: #a0aec0; }
-    
-    .device-link { display: inline-flex; align-items: center; color: #667eea; font-size: 0.9rem; font-weight: 500; padding: 0.5rem 1rem; background: #f7fafc; border-radius: 6px; transition: all 0.2s ease; }
-    .device-link:hover { background: #667eea; color: white; }
-    .device-link::after { content: "→"; margin-left: 0.5rem; font-size: 1.2rem; }
+    header,
+    .search-container,
+    .empty-state,
+    .service-card {
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
 
-    .empty-state { background: white; border-radius: 12px; padding: 3rem; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; }
-    .empty-state-text { color: #718096; font-size: 1.1rem; }
+    header {
+      text-align: center;
+      padding: 2rem;
+      border-radius: 18px;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      line-height: 1.05;
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .search-container {
+      margin-bottom: 1.25rem;
+      border-radius: 16px;
+      padding: 0.8rem;
+    }
+
+    .search-input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      padding: 1rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .search-input:focus {
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.18);
+    }
+
+    .error-card,
+    .empty-state {
+      border-radius: 16px;
+      padding: 1.2rem;
+    }
+
+    .error-card {
+      background: #fff1f2;
+      color: #b42318;
+      margin-bottom: 1.25rem;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .empty-state-text {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      list-style: none;
+    }
+
+    .service-card {
+      border-radius: 16px;
+      overflow: hidden;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    }
+
+    .service-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(102, 126, 234, 0.22);
+    }
+
+    .service-card a {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+      padding: 1.1rem;
+    }
+
+    .service-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .service-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+      word-break: break-word;
+    }
+
+    .service-host {
+      color: var(--muted);
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+
+    .status-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      margin-top: 0.35rem;
+      background: var(--good);
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+    }
+
+    .service-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 999px;
+      padding: 0.42rem 0.7rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: #eef2ff;
+      color: #4f46e5;
+    }
+
+    .badge.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
 
     @media (max-width: 768px) {
-      body { padding: 1rem; } header { padding: 1.5rem; } h1 { font-size: 2rem; } .devices-grid { grid-template-columns: 1fr; }
+      body { padding: 1rem; }
+      header { padding: 1.5rem 1.25rem; }
+      h1 { font-size: 1.9rem; }
+      .services-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -60,69 +205,44 @@
   <div class="container">
     <header>
       <h1>🔗 Tailscale Dashboard</h1>
-      <p class="subtitle">Your containerized services on Tailscale</p>
+      <p class="subtitle">Published services on your tailnet</p>
     </header>
 
     <% if @error %>
-      <div class="error-card">
-        Error fetching data: <%= @error %>
-      </div>
+      <div class="error-card">Error fetching services: <%= @error %></div>
     <% end %>
 
     <div class="search-container">
-      <input type="text" id="search-input" class="search-input" placeholder="Search devices by name or IP..." onkeyup="filterDevices()">
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="Search services by name or host..."
+        onkeyup="filterServices()"
+      >
     </div>
 
-    <% if @devices.empty? && !@error %>
+    <% if @services.empty? && !@error %>
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
-        <p class="empty-state-text">No containers found with tag:container</p>
+        <p class="empty-state-text">No published services found.</p>
       </div>
     <% else %>
-      <ul class="devices-grid" id="devices-grid">
-        <% @devices.each do |device| %>
-          <% 
-            # Detect port from tag and keep HTTPS unless HTTP is explicitly requested
-            port = ""
-            protocol = "https://"
-            device["tags"]&.each do |tag|
-              if tag =~ /^tag:port-(\d+)$/
-                port = ":#{$1}"
-              elsif tag == "tag:proto-http"
-                protocol = "http://"
-              end
-            end
-            url = "#{protocol}#{device['name']}#{port}"
-
-            # Check if recently seen (e.g. within 5 minutes)
-            # Handle potential missing lastSeen
-            is_online = false
-            begin
-              last_seen = Time.parse(device["lastSeen"])
-              is_online = (Time.now.utc - last_seen) < 300
-            rescue
-              # If parse fails or lastSeen missing, assume offline
-            end
-          %>
-          <li class="device-card" data-search="<%= device['hostname'].to_s.downcase %> <%= device['name'].to_s.downcase %> <%= (device['addresses'] || []).join(' ') %>">
-            <a href="<%= url %>" target="_blank" rel="noopener noreferrer">
-              <div class="device-header">
-                <div class="device-name"><%= device["hostname"] %></div>
-                <div class="status-dot <%= is_online ? 'status-online' : 'status-offline' %>" title="<%= is_online ? 'Online' : 'Offline (Last seen: ' + (device['lastSeen'] || 'Unknown') + ')' %>"></div>
-              </div>
-              <div class="device-hostname"><%= device["name"] %></div>
-              
-              <div class="device-ips">
-                <% (device["addresses"] || []).each do |ip| %>
-                  <div><%= ip %></div>
-                <% end %>
-              </div>
-
-              <div class="device-footer">
-                <div class="device-version">
-                  <%= device["os"] || "Unknown OS" %>  <br> TS <%= device["clientVersion"] || "Unknown" %>
+      <ul class="services-grid" id="services-grid">
+        <% @services.each do |service| %>
+          <li class="service-card" data-search="<%= [service['title'], service['host'], service['ports']].flatten.join(' ').downcase %>">
+            <a href="<%= service['url'] %>" target="_blank" rel="noopener noreferrer">
+              <div class="service-top">
+                <div>
+                  <div class="service-title"><%= service['title'] %></div>
+                  <div class="service-host"><%= service['host'] %></div>
                 </div>
-                <span class="device-link">Open <%= port.empty? ? 'Service' : "Port #{port.sub(':','')}" %></span>
+                <div class="status-dot" title="Published service"></div>
+              </div>
+
+              <div class="service-meta">
+                <span class="badge"><%= service['port'] == 80 ? 'HTTP' :  service['port'] == 443 ? 'HTTPS' : 'Unknown' %></span>
+                <span class="badge secondary">Port <%= service['port'] || 'unknown' %></span>
               </div>
             </a>
           </li>
@@ -132,20 +252,14 @@
   </div>
 
   <script>
-    function filterDevices() {
+    function filterServices() {
       const input = document.getElementById('search-input');
       const filter = input.value.toLowerCase();
-      const grid = document.getElementById('devices-grid');
-      if (!grid) return;
-      
-      const cards = grid.getElementsByClassName('device-card');
+      const cards = document.getElementsByClassName('service-card');
+
       for (let i = 0; i < cards.length; i++) {
         const searchData = cards[i].getAttribute('data-search') || '';
-        if (searchData.includes(filter)) {
-          cards[i].style.display = "";
-        } else {
-          cards[i].style.display = "none";
-        }
+        cards[i].style.display = searchData.includes(filter) ? '' : 'none';
       }
     }
   </script>
