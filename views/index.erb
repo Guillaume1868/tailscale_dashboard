@@ -83,8 +83,8 @@
         <% @devices.each do |device| %>
           <% 
             if device["isService"]
-              service_port = device["servicePort"].to_s
-              port = service_port.empty? ? "" : ":#{service_port}"
+              service_port = device["servicePort"]
+              port = service_port.is_a?(Integer) && service_port.positive? ? ":#{service_port}" : ""
               url = device["serviceUrl"].to_s.empty? ? "#" : device["serviceUrl"]
               is_online = true
               status_title = "Published service"

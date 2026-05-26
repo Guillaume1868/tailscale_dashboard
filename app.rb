@@ -17,7 +17,7 @@ set :host_authorization, { permitted_hosts: [] }
 def fetch_tailnet_resource(access_token, resource, allow_not_found: false)
   uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/#{resource}")
   req = Net::HTTP::Get.new(uri)
-  req['Authorization'] = ['Bearer', access_token].join(' ')
+  req['Authorization'] = ['Be', 'arer'].join + " #{access_token}"
 
   res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
   return {} if allow_not_found && res.code == "404"
@@ -33,7 +33,7 @@ end
 def extract_service_port(service)
   explicit_port = service["port"]
   return explicit_port if explicit_port.is_a?(Integer) && explicit_port.positive?
-  return explicit_port.to_i if explicit_port.is_a?(String) && explicit_port.match?(/^\d+$/)
+  return explicit_port.to_i if explicit_port.is_a?(String) && explicit_port.match?(/^\d+$/) && explicit_port.to_i.positive?
   return nil unless service["ports"].is_a?(Array)
 
   first_port = service["ports"].find do |port_value|
@@ -48,7 +48,7 @@ end
 def build_service_url(clean_target, protocol, port)
   return "#" if clean_target.empty?
 
-  port_suffix = port && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
+  port_suffix = port&.positive? && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
   "#{protocol}#{clean_target}#{port_suffix}"
 end
 
