@@ -51,9 +51,9 @@ get '/' do
     raise "API Error: #{res.code} - #{res.message}" unless res.is_a?(Net::HTTPSuccess)
 
     data = JSON.parse(res.body)
-    @devices = data["devices"].select do |device|
-      device["tags"]&.include?("tag:container")
-    end || []
+    @devices = (data["devices"] || []).sort_by do |device|
+      device["tags"]&.include?("tag:container") ? 1 : 0
+    end
     @error = nil
   rescue => e
     @devices = []
