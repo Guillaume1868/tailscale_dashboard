@@ -112,6 +112,7 @@
               end
               status_title = is_online ? "Online" : "Offline (Last seen: #{device['lastSeen'] || 'Unknown'})"
             end
+            link_label = device["isService"] || port.empty? ? "Service" : "Port #{port.sub(':','')}"
           %>
           <li class="device-card" data-search="<%= device['hostname'].to_s.downcase %> <%= device['name'].to_s.downcase %> <%= (device['addresses'] || []).join(' ') %>">
             <a href="<%= url %>" target="_blank" rel="noopener noreferrer">
@@ -131,7 +132,7 @@
                 <div class="device-version">
                   <%= device["os"] || "Unknown OS" %>  <br> TS <%= device["clientVersion"] || "Unknown" %>
                 </div>
-                <span class="device-link">Open <%= device["isService"] ? 'Service' : (port.empty? ? 'Service' : "Port #{port.sub(':','')}") %></span>
+                <span class="device-link">Open <%= link_label %></span>
               </div>
             </a>
           </li>

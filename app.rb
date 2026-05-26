@@ -113,9 +113,7 @@ get '/' do
     tagged_devices = (devices_data["devices"] || []).select do |device|
       device["tags"].is_a?(Array) && device["tags"].include?("tag:container")
     end.sort_by do |device|
-      hostname = device["hostname"].to_s.downcase
-      fallback_name = device["name"].to_s.downcase
-      hostname.empty? ? fallback_name : hostname
+      first_present(device["hostname"], device["name"]).to_s.downcase
     end
 
     @devices = services + tagged_devices
