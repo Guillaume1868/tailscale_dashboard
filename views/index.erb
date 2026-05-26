@@ -112,8 +112,10 @@
               end
               status_title = is_online ? "Online" : "Offline (Last seen: #{device['lastSeen'] || 'Unknown'})"
             end
-            link_label = if device["isService"] || port.empty?
+            link_label = if device["isService"]
                            "Service"
+                         elsif port.empty?
+                           "Device"
                          else
                            "Port #{port.sub(':','')}"
                          end

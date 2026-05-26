@@ -14,12 +14,13 @@ $token_expires_at = Time.now - 60  # Expired by default
 
 set :host_authorization, { permitted_hosts: [] }
 
-def fetch_tailnet_resource(access_token, resource)
+def fetch_tailnet_resource(access_token, resource, allow_not_found: false)
   uri = URI("https://api.tailscale.com/api/v2/tailnet/#{TAILNET}/#{resource}")
   req = Net::HTTP::Get.new(uri)
   req['Authorization'] = ['Bearer', access_token].join(' ')
 
   res = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) { |http| http.request(req) }
+  return {} if allow_not_found && res.code == "404"
   raise "API Error (#{resource}): #{res.code} - #{res.message}" unless res.is_a?(Net::HTTPSuccess)
 
   JSON.parse(res.body)
@@ -31,7 +32,8 @@ end
 
 def extract_service_port(service)
   explicit_port = service["port"]
-  return explicit_port.to_i if explicit_port.to_s.match?(/^\d+$/)
+  return explicit_port if explicit_port.is_a?(Integer) && explicit_port.positive?
+  return explicit_port.to_i if explicit_port.is_a?(String) && explicit_port.match?(/^\d+$/)
   return nil unless service["ports"].is_a?(Array)
 
   first_port = service["ports"].find do |port_value|
@@ -117,12 +119,7 @@ get '/' do
   begin
     access_token = fetch_oauth_token
 
-    services_data = begin
-      fetch_tailnet_resource(access_token, 'services')
-    rescue => e
-      raise unless e.message.include?('API Error (services): 404')
-      { "services" => [] }
-    end
+    services_data = fetch_tailnet_resource(access_token, 'services', allow_not_found: true)
     devices_data = fetch_tailnet_resource(access_token, 'devices')
 
     services = (services_data["services"] || []).map { |service| normalize_service(service) }.sort_by do |service|
