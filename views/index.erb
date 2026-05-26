@@ -73,14 +73,14 @@
       <input type="text" id="search-input" class="search-input" placeholder="Search devices by name or IP..." onkeyup="filterDevices()">
     </div>
 
-    <% if @devices.empty? && !@error %>
+    <% if (@vip_services.nil? || @vip_services.empty?) && !@error %>
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
         <p class="empty-state-text">No services or tagged devices found. Publish services or use tag:container to list devices.</p>
       </div>
     <% else %>
       <ul class="devices-grid" id="devices-grid">
-        <% @devices.each do |device| %>
+        <% (@vip_services || []).each do |device| %>
           <% 
             if device["isService"]
               service_port = device["servicePort"]
@@ -151,10 +151,7 @@
     function filterDevices() {
       const input = document.getElementById('search-input');
       const filter = input.value.toLowerCase();
-      const grid = document.getElementById('devices-grid');
-      if (!grid) return;
-      
-      const cards = grid.getElementsByClassName('device-card');
+      const cards = document.getElementsByClassName('device-card');
       for (let i = 0; i < cards.length; i++) {
         const searchData = cards[i].getAttribute('data-search') || '';
         if (searchData.includes(filter)) {

@@ -37,25 +37,42 @@ def extract_service_port(service)
   return explicit_port.to_i if explicit_port.is_a?(String) && explicit_port.match?(/^\d+$/) && explicit_port.to_i.positive?
   return nil unless service["ports"].is_a?(Array)
 
-  first_port = service["ports"].find do |port_value|
-    port_value.to_s.match?(/^\d+$/) || (port_value.is_a?(Hash) && port_value["port"].to_s.match?(/^\d+$/))
+  service["ports"].each do |port_value|
+    if port_value.is_a?(Hash) && port_value["port"].to_s.match?(/^\d+$/)
+      return port_value["port"].to_i
+    end
+
+    # Handle strings like "443", "tcp:443", or "443/tcp"
+    if port_value.to_s.match(/(\d+)/)
+      return port_value.to_s.match(/(\d+)/)[1].to_i
+    end
   end
 
-  return nil if first_port.nil?
-
-  first_port.is_a?(Hash) ? first_port["port"].to_i : first_port.to_i
+  nil
 end
 
 def build_service_url(clean_target, protocol, port)
-  return "#" if clean_target.empty?
+  return "#" if clean_target.to_s.strip.empty?
 
   port_suffix = port && port.positive? && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
   "#{protocol}#{clean_target}#{port_suffix}"
 end
 
+def build_tailnet_service_url(hostname, protocol, port)
+  return "#" if hostname.to_s.strip.empty?
+  # If hostname already looks like a full domain, use it; otherwise append the tailnet.
+  host = hostname.include?('.') ? hostname : "#{hostname}.#{TAILNET}"
+  port_suffix = port && port.positive? && host !~ /:\d+\z/ ? ":#{port}" : ""
+  "#{protocol}#{host}#{port_suffix}"
+end
+
 def normalize_service(service)
   hostname = first_present(service["hostname"], service["name"], "Service").to_s
   raw_target = first_present(service["dnsName"], service["tailnetTarget"], service["name"], service["hostname"]).to_s
+
+  # Strip leading svc: prefix for nicer display (case-insensitive)
+  hostname = hostname.sub(/\Asvc:/i, '').strip
+  raw_target = raw_target.sub(/\Asvc:/i, '').strip
   clean_target = raw_target.sub(%r{\Ahttps?://}, "")
   protocol = if raw_target.start_with?("http://")
                "http://"
@@ -78,9 +95,13 @@ def normalize_service(service)
                 [raw_addresses.to_s]
               end
 
+  # Build link targeting the tailnet domain and respect the advertised port
+  service_host = hostname
+  service_url = build_tailnet_service_url(service_host, protocol, port)
+
   {
     "hostname" => hostname,
-    "name" => clean_target.empty? ? hostname : clean_target,
+    "name" => service_host,
     "addresses" => addresses,
     "tags" => [],
     "lastSeen" => Time.now.utc.iso8601,
@@ -88,7 +109,7 @@ def normalize_service(service)
     "clientVersion" => service["protocol"].to_s.empty? ? "Published" : service["protocol"].to_s.upcase,
     "isService" => true,
     "servicePort" => port,
-    "serviceUrl" => build_service_url(clean_target, protocol, port)
+    "serviceUrl" => service_url
   }
 end
 
@@ -123,20 +144,28 @@ get '/' do
     services_data = fetch_tailnet_resource(access_token, 'services', allow_not_found: true)
     devices_data = fetch_tailnet_resource(access_token, 'devices')
 
-    services = (services_data["services"] || []).map { |service| normalize_service(service) }.sort_by do |service|
+    # Use only VIP-style services returned under "vipServices" for the dashboard.
+    services_raw = []
+    if services_data["vipServices"].is_a?(Array)
+      services_raw = services_data["vipServices"].map do |vip|
+        {
+          "name" => vip["name"],
+          "hostname" => vip["name"],
+          "ports" => (vip["ports"] || []).map { |p| p.to_s.match(/(\d+)/) ? p.to_s.match(/(\d+)/)[1] : p },
+          "addresses" => vip["addrs"] || vip["addresses"] || vip["address"],
+          "tags" => vip["tags"] || []
+        }
+      end
+    end
+
+    services = (services_raw || []).map { |service| normalize_service(service) }.sort_by do |service|
       service["hostname"].to_s.downcase
     end
 
-    tagged_devices = (devices_data["devices"] || []).select do |device|
-      device["tags"].is_a?(Array) && device["tags"].include?("tag:container")
-    end.sort_by do |device|
-      first_present(device["hostname"], device["name"]).to_s.downcase
-    end
-
-    @devices = services + tagged_devices
+    @vip_services = services
     @error = nil
   rescue => e
-    @devices = []
+    @vip_services = []
     @error = e.message
   end
 
