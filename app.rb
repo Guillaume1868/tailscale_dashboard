@@ -30,7 +30,8 @@ def first_present(*values)
 end
 
 def extract_service_port(service)
-  return service["port"].to_i if service["port"].to_s.match?(/^\d+$/)
+  explicit_port = service["port"]
+  return explicit_port.to_i if !explicit_port.nil? && explicit_port.to_s.match?(/^\d+$/)
   return nil unless service["ports"].is_a?(Array)
 
   first_port = service["ports"].find do |port_value|
@@ -40,6 +41,13 @@ def extract_service_port(service)
   return nil if first_port.nil?
 
   first_port.is_a?(Hash) ? first_port["port"].to_i : first_port.to_i
+end
+
+def build_service_url(clean_target, protocol, port)
+  return "#" if clean_target.empty?
+
+  port_suffix = port && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
+  "#{protocol}#{clean_target}#{port_suffix}"
 end
 
 def normalize_service(service)
@@ -56,10 +64,15 @@ def normalize_service(service)
                "https://"
              end
   port = extract_service_port(service)
-  port_suffix = port && clean_target !~ /:\d+\z/ ? ":#{port}" : ""
 
   raw_addresses = service["addresses"] || service["addrs"] || service["address"]
-  addresses = raw_addresses.is_a?(Array) ? raw_addresses.map(&:to_s) : raw_addresses.to_s.empty? ? [] : [raw_addresses.to_s]
+  addresses = if raw_addresses.is_a?(Array)
+                raw_addresses.map(&:to_s)
+              elsif raw_addresses.to_s.empty?
+                []
+              else
+                [raw_addresses.to_s]
+              end
 
   {
     "hostname" => hostname,
@@ -71,7 +84,7 @@ def normalize_service(service)
     "clientVersion" => service["protocol"].to_s.empty? ? "Published" : service["protocol"].to_s.upcase,
     "isService" => true,
     "servicePort" => port,
-    "serviceUrl" => clean_target.empty? ? "#" : "#{protocol}#{clean_target}#{port_suffix}"
+    "serviceUrl" => build_service_url(clean_target, protocol, port)
   }
 end
 

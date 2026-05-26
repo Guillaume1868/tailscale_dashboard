@@ -112,7 +112,11 @@
               end
               status_title = is_online ? "Online" : "Offline (Last seen: #{device['lastSeen'] || 'Unknown'})"
             end
-            link_label = device["isService"] || port.empty? ? "Service" : "Port #{port.sub(':','')}"
+            link_label = if device["isService"] || port.empty?
+                           "Service"
+                         else
+                           "Port #{port.sub(':','')}"
+                         end
           %>
           <li class="device-card" data-search="<%= device['hostname'].to_s.downcase %> <%= device['name'].to_s.downcase %> <%= (device['addresses'] || []).join(' ') %>">
             <a href="<%= url %>" target="_blank" rel="noopener noreferrer">
