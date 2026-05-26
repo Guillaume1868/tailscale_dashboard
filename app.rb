@@ -31,7 +31,7 @@ end
 
 def extract_service_port(service)
   explicit_port = service["port"]
-  return explicit_port.to_i if !explicit_port.nil? && explicit_port.to_s.match?(/^\d+$/)
+  return explicit_port.to_i if explicit_port.to_s.match?(/^\d+$/)
   return nil unless service["ports"].is_a?(Array)
 
   first_port = service["ports"].find do |port_value|
@@ -65,6 +65,7 @@ def normalize_service(service)
              end
   port = extract_service_port(service)
 
+  # Handle current and legacy service payload field names.
   raw_addresses = service["addresses"] || service["addrs"] || service["address"]
   addresses = if raw_addresses.is_a?(Array)
                 raw_addresses.map(&:to_s)
@@ -116,7 +117,12 @@ get '/' do
   begin
     access_token = fetch_oauth_token
 
-    services_data = fetch_tailnet_resource(access_token, 'services')
+    services_data = begin
+      fetch_tailnet_resource(access_token, 'services')
+    rescue => e
+      raise unless e.message.include?('API Error (services): 404')
+      { "services" => [] }
+    end
     devices_data = fetch_tailnet_resource(access_token, 'devices')
 
     services = (services_data["services"] || []).map { |service| normalize_service(service) }.sort_by do |service|

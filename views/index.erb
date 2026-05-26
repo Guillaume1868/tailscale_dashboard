@@ -76,7 +76,7 @@
     <% if @devices.empty? && !@error %>
       <div class="empty-state">
         <div class="empty-state-icon">📦</div>
-        <p class="empty-state-text">No services or tagged devices found in this tailnet</p>
+        <p class="empty-state-text">No services or tagged devices found. Publish services or use tag:container to list devices.</p>
       </div>
     <% else %>
       <ul class="devices-grid" id="devices-grid">
